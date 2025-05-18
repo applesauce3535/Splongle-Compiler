@@ -1,0 +1,3 @@
+/home/splongle/muh_compiler/splongle/build/CMakeFiles/splongc.dir
+/home/splongle/muh_compiler/splongle/build/CMakeFiles/edit_cache.dir
+/home/splongle/muh_compiler/splongle/build/CMakeFiles/rebuild_cache.dir
