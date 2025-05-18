@@ -4,115 +4,9 @@
 #include <optional>
 #include <vector>
 #include <ostream>
-enum class TokenType { 
-
-    /*
-        The different tokens of splongle
-    */
-
-    _return,
-    int_lit,
-    splong
-
-};
-
-struct Token { 
-
-    /*
-        a token consists of its token type and an optional value
-    */
-
-    TokenType type;
-    std::optional<std::string> value {}; // default nothing
-    
-};
+#include "./tokenization.hpp"
 
 
-std::vector<Token> tokenize(const std::string& str) {
-
-    /* 
-        This function is responsible for tokenizing the input file.
-        Usage: str = input file as a string
-    */
-
-    std::vector<Token> tokens; // used for storing all tokens, return value
-    std::string buf; // used for storing current token
-    
-    for (int i = 0; i < str.length(); ++i) {
-
-        if (i < str.length() && std::isalpha(str.at(i))) { // identifiers must begin with a character
-
-            buf.push_back(str.at(i));
-            ++i;
-
-            while (i < str.length() && std::isalnum(str.at(i))) { // continually add to the buffer until reaching
-                                              // a terminating character
-                buf.push_back(str.at(i));
-                ++i;
-
-            }
-
-            --i; // we will end one character ahead of the token, so take one step back
-            
-            if (buf == "return") { // if the token we looked at is return, push the return token
-        
-                tokens.push_back({.type = TokenType::_return});
-                buf.clear();
-                continue;
-
-            }
-
-            else if (buf == "splong") { // if the token was splong, push the splong token
-
-                tokens.push_back({.type = TokenType::splong});
-                buf.clear();
-                continue;
-
-            }
-
-            else { // handle unknown identifiers and keywords
-                
-                std::cerr << "MAJOR FUCK UP\n";
-                exit(EXIT_FAILURE);
-
-            }
-        }
-
-        else if (std::isdigit(str.at(i))) { // handling integer literals
-
-            buf.push_back(str.at(i));
-            ++i;
-
-            while (i < str.length() && std::isdigit(str.at(i))) {
-
-                buf.push_back(str.at(i));
-                ++i;
-
-            }
-
-            --i; // again must go back one
-            tokens.push_back({.type = TokenType::int_lit, .value = buf});
-            buf.clear();
-
-        }
-
-        else if (i < str.length() && std::isspace(str.at(i))) { // ignore any kind of white space
-
-            continue;
-
-        }
-
-        else { // if nothing above happened then there's a major fuck up
-
-            std::cerr << "MAJOR FUCK UP\n";
-            exit(EXIT_FAILURE);
-
-        }
-    }
-
-    return tokens;
-
-}
 
 std::string tokens_to_asm (const std::vector<Token>& tokens) {
     /*
@@ -124,7 +18,7 @@ std::string tokens_to_asm (const std::vector<Token>& tokens) {
     output << "global _start\n_start:\n";
     for (int i = 0; i < tokens.size(); ++i) {
         const Token& token = tokens.at(i);
-        if (token.type == TokenType::_return) { // when we encounter a return token we must ensure there are at most
+        if (token.type == TokenType::exit) { // when we encounter a return token we must ensure there are at most
                                                 // two tokens next
             if (i + 1 < tokens.size() && tokens.at(i + 1).type == TokenType::int_lit) {
                 if (i + 2 < tokens.size() && tokens.at(i + 2).type == TokenType::splong) {
@@ -156,13 +50,18 @@ int main(int argc, char* argv[]) {
     std::string contents = contents_stream.str(); // convert that string stream into a string
     input.close();
 
-    std::vector<Token> tokens = tokenize(contents);
+    std::cout << "File contents: " << contents << "\n";
+
+    Tokenizer tokenizer(std::move(contents)); // std::move improves performance i guess by not making copies
+
+    std::vector<Token> tokens = tokenizer.tokenize();
     std::cout << tokens_to_asm(tokens) << "\n";
     
     std::fstream output("out.asm", std::ios::out); // treat the output assembly file as ONLY output
     output << tokens_to_asm(tokens); // write assembly to the output
     output.close();
-    system("nasm -f win64 out.asm");
-    system("ld -o out out.obj");
+
+    system("nasm -felf64 out.asm");
+    system("ld -o out out.o");
     return EXIT_SUCCESS;
 }
