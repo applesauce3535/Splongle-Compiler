@@ -1,0 +1,7 @@
+# Ignore specific files
+out
+out.asm
+out.obj
+
+# Ignore the build directory and everything inside it
+build/

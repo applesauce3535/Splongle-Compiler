@@ -121,7 +121,7 @@ std::string tokens_to_asm (const std::vector<Token>& tokens) {
     */
 
     std::stringstream output; // return value
-    output << "global _start\nstart:\n";
+    output << "global _start\n_start:\n";
     for (int i = 0; i < tokens.size(); ++i) {
         const Token& token = tokens.at(i);
         if (token.type == TokenType::_return) { // when we encounter a return token we must ensure there are at most
@@ -159,5 +159,10 @@ int main(int argc, char* argv[]) {
     std::vector<Token> tokens = tokenize(contents);
     std::cout << tokens_to_asm(tokens) << "\n";
     
+    std::fstream output("out.asm", std::ios::out); // treat the output assembly file as ONLY output
+    output << tokens_to_asm(tokens); // write assembly to the output
+    output.close();
+    system("nasm -f win64 out.asm");
+    system("ld -o out out.obj");
     return EXIT_SUCCESS;
 }
