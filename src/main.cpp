@@ -4,6 +4,8 @@
 #include <optional>
 #include <vector>
 #include <ostream>
+#include "./tokenization.hpp"
+#include "./parser.hpp"
 #include "./generation.hpp"
 
 
