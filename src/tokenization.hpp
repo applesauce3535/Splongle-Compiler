@@ -7,7 +7,7 @@
 /*
     The different tokens of splongle
 */
-enum class TokenType {exit, int_lit, splong};
+enum class TokenType {id, exit, int_lit, splong, open_paren, close_paren, splinge, assign};
 
 
 struct Token { 
@@ -50,9 +50,15 @@ public:
                     buf.clear();
                     continue;
                 }
-                else { // handle non-allowed identifier characters
-                    std::cerr << "MAJOR FUCK UP\n";
-                    exit(EXIT_FAILURE);
+                else if (buf == "splinge") { // splinge data type
+                    tokens.push_back({.type = TokenType::splinge});
+                    buf.clear();
+                    continue;
+                }
+                else { // make a variable 
+                    tokens.push_back({.type = TokenType::id, .value = buf});
+                    buf.clear();
+                    continue;
                 }
             }
             else if (std::isdigit(peek().value())) { // handle integer literals
@@ -68,6 +74,21 @@ public:
                 consume();
                 continue;
             }
+            else if (peek().value() == '(') { // handle openeing parenthesis
+                consume();
+                tokens.push_back({.type = TokenType::open_paren});
+                continue;
+            }
+            else if (peek().value() == ')') { // handle closing parenthesis
+                consume();
+                tokens.push_back({.type = TokenType::close_paren});
+                continue;
+            }
+            else if (peek().value() == '=') { // handle assignment
+                consume();
+                tokens.push_back({.type = TokenType::assign});
+                continue;
+            }
             else { // handle any undefined tokens of splongle
                 std::cerr << "MAJOR FUCK UP\n";
                 exit(EXIT_FAILURE);
@@ -79,12 +100,12 @@ public:
 
 private:
     
-    [[nodiscard]] inline std::optional<char> peek(int ahead = 1) const { // [[nodiscard]] = ignore stupid compiler complaints about a function literally doing nothing
-        if (m_index + ahead > m_src.length()) {
+    [[nodiscard]] inline std::optional<char> peek(int offset = 0) const { // [[nodiscard]] = ignore stupid compiler complaints about a function literally doing nothing
+        if (m_index + offset >= m_src.length()) {
             return {};
         }
         else {
-            return m_src.at(m_index);
+            return m_src.at(m_index + offset);
         }
     }
 

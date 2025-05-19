@@ -2,6 +2,7 @@
 out
 out.asm
 out.obj
+out.o
 
 # Ignore the build directory and everything inside it
 build/
