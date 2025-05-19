@@ -32,24 +32,20 @@ public:
             This function is responsible for tokenizing the input file.
             Usage: str = input file as a string
         */
-        std::cout << "Starting tokenization\n";
         std::vector<Token> tokens; // used for storing all tokens, return value
         std::string buf; // used for storing current token
         while (peek().has_value()) {
-            std::cout << "Current character: " << peek().value() << "\n";
             if (std::isalpha(peek().value())) {
                 buf.push_back(consume());
                 while (peek().has_value() && std::isalnum(peek().value())) {
                     buf.push_back(consume());
                 }
                 if (buf == "exit") { // handle exit keyword
-                    std::cout << "Token 'exit' recognized\n";
                     tokens.push_back({.type = TokenType::exit});
                     buf.clear();
                     continue;
                 }
                 else if (buf == "splong") { // handle splong end of statement
-                    std::cout << "Token 'splong' recognized\n";
                     tokens.push_back({.type = TokenType::splong});
                     buf.clear();
                     continue;
@@ -64,13 +60,11 @@ public:
                 while (peek().has_value() && std::isdigit(peek().value())) {
                     buf.push_back(consume());
                 }
-                std::cout << "integer recognized\n";
                 tokens.push_back({.type = TokenType::int_lit, .value = buf});
                 buf.clear();
                 continue;
             }
             else if (std::isspace(peek().value())) { // ignore any white space characters
-                std::cout << "white space recognized, skipping\n";
                 consume();
                 continue;
             }
@@ -85,7 +79,7 @@ public:
 
 private:
     
-    [[nodiscard]] std::optional<char> peek(int ahead = 1) const { // [[nodiscard]] = ignore stupid compiler complaints about a function literally doing nothing
+    [[nodiscard]] inline std::optional<char> peek(int ahead = 1) const { // [[nodiscard]] = ignore stupid compiler complaints about a function literally doing nothing
         if (m_index + ahead > m_src.length()) {
             return {};
         }
@@ -94,11 +88,11 @@ private:
         }
     }
 
-    char consume() {
+    inline char consume() {
         return m_src.at(m_index++);
     }
 
     const std::string m_src;
-    int m_index;
+    size_t m_index; // why is c++ like this
 
 };
