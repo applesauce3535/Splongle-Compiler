@@ -3,6 +3,7 @@ out
 out.asm
 out.obj
 out.o
+test.splong
 
 # Ignore the build directory and everything inside it
 build/
