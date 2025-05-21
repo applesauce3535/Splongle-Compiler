@@ -4,31 +4,50 @@
 #include <variant>
 
 struct NodeExprIntLit {
+    // for when an integer literal is used
     Token int_lit;
 };
 
+struct NodeExprDPLit {
+    // for when a double-point literal is used
+    Token dp_lit;
+};
+
 struct NodeExprId {
+    // for when an identifier is used
     Token id;
 };
 
 struct NodeExpr {
-    std::variant<NodeExprIntLit, NodeExprId> var; 
+    // an expression can be either an integer literal or an identifier, which is what var is
+    std::variant<NodeExprIntLit, NodeExprId, NodeExprDPLit> var; 
 };
 
 struct NodeStmtSplinge {
+    // a splinge will be an identifier and will also contain an expression as its value
+    Token id;
+    NodeExpr expr;
+};
+
+struct NodeStmtSplongd {
+    // a splongd will be an identifier and will also contain an expression as its value
     Token id;
     NodeExpr expr;
 };
 
 struct NodeStmtExit {
+    // the exit() statement must contain an expression in the parentheses
     NodeExpr expr;
 };
 
 struct NodeStmt {
-    std::variant<NodeStmtExit, NodeStmtSplinge> var;
+    // a statement can either be exit() or a splinge (that is int) declaration
+    // TODO: implement more built-ins and data types
+    std::variant<NodeStmtExit, NodeStmtSplinge, NodeStmtSplongd> var;
 };
 
 struct NodeProg{
+    // this is just saying the whole program should be a list of statements
     std::vector<NodeStmt> stmts;
 };
 
@@ -47,6 +66,9 @@ public:
     std::optional<NodeExpr> parse_expr() {
         if (peek().has_value() && peek().value().type == TokenType::int_lit) {
             return NodeExpr{.var = NodeExprIntLit{.int_lit = consume()}}; // return a NodeExpr with int_lit assigned to the int_lit token it's looking at
+        }
+        else if (peek().has_value() && peek().value().type == TokenType::dp_lit) {
+            return NodeExpr{.var = NodeExprDPLit{.dp_lit = consume()}}; // return a NodeExpr with dp_lit assigned to the dp_lit token it's looking at
         }
         else if (peek().has_value() && peek().value().type == TokenType::id) {
             return NodeExpr {.var = NodeExprId {.id = consume()}}; // return a NodeExpr with id assigned to the id it's looking at
@@ -106,6 +128,28 @@ public:
                 exit(EXIT_FAILURE);
             }
             return NodeStmt {.var = stmt_splinge};
+        }
+        else if (peek().has_value() && peek().value().type == TokenType::splongd &&
+                peek(1).has_value() && peek(1).value().type == TokenType::id &&
+                peek(2).has_value() && peek(2).value().type == TokenType::assign) { // check that the token is a splongd data type, it has an id, and is assigned a value
+            consume(); // consume the splongd
+            auto stmt_splongd = NodeStmtSplongd {.id = consume()}; // the splongd statement's id is the next consumed value
+            consume(); // conusme the '='
+            if (auto expr = parse_expr()) {
+                stmt_splongd.expr = expr.value(); // the splongd's value should either be a double-point literal or a valid id
+            }
+            else {
+                std::cerr << "Invalid expression, DOW\n";
+                exit(EXIT_FAILURE);
+            }
+            if (peek().has_value() && peek().value().type == TokenType::splong) {
+                consume();
+            }
+            else {
+                std::cerr << "Expected 'splong', DOW\n";
+                exit(EXIT_FAILURE);
+            }
+            return NodeStmt {.var = stmt_splongd};
         }
         else {
             return {};

@@ -3,11 +3,12 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <algorithm>
 
 /*
     The different tokens of splongle
 */
-enum class TokenType {id, exit, int_lit, splong, open_paren, close_paren, splinge, assign};
+enum class TokenType {id, exit, int_lit, splong, open_paren, close_paren, splinge, splongd, dp_lit, assign};
 
 
 struct Token { 
@@ -55,20 +56,81 @@ public:
                     buf.clear();
                     continue;
                 }
+                else if (buf == "splongd") {
+                    tokens.push_back({.type = TokenType::splongd});
+                    buf.clear();
+                    continue;
+                }
                 else { // make a variable 
                     tokens.push_back({.type = TokenType::id, .value = buf});
                     buf.clear();
                     continue;
                 }
             }
-            else if (std::isdigit(peek().value())) { // handle integer literals
+            // TODO: I need to check what the data type declared for the variable is, otherwise I think this could put doubles in integer identifiers
+            // because there isn't currently type checking
+            else if (peek().value() == '.') { // handle double-point literals (64-bits)
                 buf.push_back(consume());
-                while (peek().has_value() && std::isdigit(peek().value())) {
+                while (peek().has_value() && (std::isdigit(peek().value()) || peek().value() == '.')) {
                     buf.push_back(consume());
                 }
+                if (std::count(buf.begin(), buf.end(), '.') > 1) {
+                    std::cerr << "Floating-point literal " << buf << " has more than 1 decimal point, DOW\n";
+                    exit(EXIT_FAILURE);
+                }
+                size_t dot_index = buf.find('.');
+                if (dot_index == std::string::npos) { // handle a missing decimal point
+                    std::cerr << "Missing decimal point in double literal: " << buf << ", DOW\n";
+                    exit(EXIT_FAILURE);
+                }
+                if (dot_index + 1 >= buf.length()) { // handle the decimal point being at the end of the number, meaning no digits follow it
+                    std::cerr << "Decimal point at end of literal: " << buf << ", DOW\n";
+                    exit(EXIT_FAILURE);
+                }
+                if (!std::isdigit(buf[dot_index + 1])) { // handle if a digit does not follow the decimal point
+                    std::cerr << "No digit after decimal point in double literal: " << buf << ", DOW\n";
+                    exit(EXIT_FAILURE);
+                }
+                else { // if it passes all of the checks, tokenize it
+                    tokens.push_back({.type = TokenType::dp_lit, .value = buf});
+                    buf.clear();
+                    continue;
+                }
+            } 
+            else if (std::isdigit(peek().value())) { // handle integer literals (64-bits)
+                buf.push_back(consume());
+                while (peek().has_value() && (std::isdigit(peek().value()) || peek().value() == '.')) {
+                    buf.push_back(consume());
+                }
+                if (buf.find('.') != std::string::npos) { // if the integer just tokenized has a decimal point make it a double
+                    if (std::count(buf.begin(), buf.end(), '.') > 1) {
+                        std::cerr << "Floating-point literal " << buf << " has more than 1 decimal point, DOW\n";
+                        exit(EXIT_FAILURE);
+                    }
+                    size_t dot_index = buf.find('.');
+                    if (dot_index == std::string::npos) { // handle a missing decimal point
+                        std::cerr << "Missing decimal point in double literal: " << buf << ", DOW\n";
+                        exit(EXIT_FAILURE);
+                    }
+                    if (dot_index + 1 >= buf.length()) { // handle the decimal point being at the end of the number, meaning no digits follow it
+                        std::cerr << "Decimal point at end of literal: " << buf << ", DOW\n";
+                        exit(EXIT_FAILURE);
+                    }
+                    if (!std::isdigit(buf[dot_index + 1])) { // handle if a digit does not follow the decimal point
+                        std::cerr << "No digit after decimal point in double literal: " << buf << ", DOW\n";
+                        exit(EXIT_FAILURE);
+                    }
+                    else { // if it passes all of the checks, tokenize it
+                        tokens.push_back({.type = TokenType::dp_lit, .value = buf});
+                        buf.clear();
+                        continue;
+                    }
+                }
+                else { // otherwise we can say it's an integer
                 tokens.push_back({.type = TokenType::int_lit, .value = buf});
                 buf.clear();
                 continue;
+                }
             }
             else if (std::isspace(peek().value())) { // ignore any white space characters
                 consume();
