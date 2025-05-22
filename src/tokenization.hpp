@@ -8,7 +8,8 @@
 /*
     The different tokens of splongle
 */
-enum class TokenType {id, exit, int_lit, splong, open_paren, close_paren, splinge, splongd, dp_lit, assign};
+enum class TokenType {id, exit, int_lit, splong, open_paren, close_paren, splinge, splongd, dp_lit, assign
+                      add, mul};
 
 
 struct Token { 
@@ -151,6 +152,11 @@ public:
                 tokens.push_back({.type = TokenType::assign});
                 continue;
             }
+            else if (peek().value() == '+') { // handle addition
+                consume();
+                tokens.push_back({.type = TokenType::add});
+                continue;
+            }
             else { // handle any undefined tokens of splongle
                 std::cerr << "MAJOR FUCK UP\n";
                 exit(EXIT_FAILURE);
@@ -176,6 +182,6 @@ private:
     }
 
     const std::string m_src;
-    size_t m_index; // why is c++ like this
+    size_t m_index;
 
 };
