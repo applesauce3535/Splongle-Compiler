@@ -90,32 +90,32 @@ public:
     : m_tokens(std::move(tokens)), m_allocator(1024 * 1024 * 4) // arena is 4MB
     {}
 
-    std::optional<NodeBinExpr*> parse_bin_expr() {
-        if (auto left = parse_expr()) {
-            auto bin_expr = m_allocator.alloc<NodeBinExpr>();
-            if (peek().has_value() && peek().value().type == TokenType::add) {
-                auto bin_expr_add = m_allocator.alloc<NodeBinExprAdd>();
-                bin_expr_add->left = left.value();
-                consume(); // consume '+'
-                if (auto right = parse_expr()) {
-                    bin_expr_add->right = right.value();
-                    bin_expr->var = bin_expr_add;
-                    return bin_expr;
-                }
-                else {
-                    std::cerr << "Expected epxression after '+', DOW\n";
-                    exit(EXIT_FAILURE);
-                }
-            }
-            else {
-                std::cerr << "Unsupported binary operator, DOW\n";
-                exit(EXIT_FAILURE);
-            }
-        }
-        else {
-            return {};
-        }
-    }
+    // std::optional<NodeBinExpr*> parse_bin_expr() {
+    //     if (auto left = parse_expr()) {
+    //         auto bin_expr = m_allocator.alloc<NodeBinExpr>();
+    //         if (peek().has_value() && peek().value().type == TokenType::add) {
+    //             auto bin_expr_add = m_allocator.alloc<NodeBinExprAdd>();
+    //             bin_expr_add->left = left.value();
+    //             consume(); // consume '+'
+    //             if (auto right = parse_expr()) {
+    //                 bin_expr_add->right = right.value();
+    //                 bin_expr->var = bin_expr_add;
+    //                 return bin_expr;
+    //             }
+    //             else {
+    //                 std::cerr << "Expected epxression after '+', DOW\n";
+    //                 exit(EXIT_FAILURE);
+    //             }
+    //         }
+    //         else {
+    //             std::cerr << "Unsupported binary operator, DOW\n";
+    //             exit(EXIT_FAILURE);
+    //         }
+    //     }
+    //     else {
+    //         return {};
+    //     }
+    // }
 
     std::optional<NodeTerm*> parse_term() {
         if (peek().has_value() && peek().value().type == TokenType::int_lit) {
@@ -146,7 +146,22 @@ public:
 
     std::optional<NodeExpr*> parse_expr() {
         if (auto term = parse_term()) {
-
+            auto bin_expr = m_allocator.alloc<NodeBinExpr>();
+            if (peek().has_value() && peek().value().type == TokenType::add) {
+                auto bin_expr_add = m_allocator.alloc<NodeBinExprAdd>();
+                bin_expr_add->left = term.value();
+                consume(); // consume '+'
+                if (auto right = parse_expr()) {
+                    bin_expr_add->right = right.value();
+                    bin_expr->var = bin_expr_add;
+                    auto expr = m_allocator.alloc<NodeExpr>();
+                    return expr;
+                }
+                else {
+                    std::cerr << "Expected epxression after '+', DOW\n";
+                    exit(EXIT_FAILURE);
+                }
+            }
         }
         else {
             return {};
