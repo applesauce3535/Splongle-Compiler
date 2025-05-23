@@ -15,7 +15,7 @@ public:
         struct ExprVisitor {
             Generator* gen;
 
-            void operator()(const NodeExprId* expr_id) {
+            void operator()(const NodeTermId* expr_id) {
                 if (!gen->m_symbol_table.contains(expr_id->id.value.value())) {
                     std::cerr << "Undeclared identifier: " << expr_id->id.value.value() << "\n";
                     exit(EXIT_FAILURE);
@@ -26,11 +26,11 @@ public:
                 gen->push(offset.str());
             }
 
-            void operator()(const NodeExprIntLit* expr_int) const {
+            void operator()(const NodeTermIntLit* expr_int) const {
                 gen->m_output << "    mov rax, " << expr_int->int_lit.value.value() << "\n";
                 gen->push("rax");
             }
-            void operator()(const NodeExprDPLit* expr_double) const {
+            void operator()(const NodeTermDPLit* expr_double) const {
                 std::string label = "L" + std::to_string(gen->m_label_counter++); // make a label of L + the current label counter and then post increment it
                 gen->m_data << label << ": dq " << expr_double->dp_lit.value.value() << "\n";
 

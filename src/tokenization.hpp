@@ -8,7 +8,7 @@
 /*
     The different tokens of splongle
 */
-enum class TokenType {id, exit, int_lit, splong, open_paren, close_paren, splinge, splongd, dp_lit, assign
+enum class TokenType {id, exit, int_lit, splong, open_paren, close_paren, splinge, splongd, dp_lit, assign, 
                       add, mul};
 
 

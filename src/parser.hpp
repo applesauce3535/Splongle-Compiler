@@ -91,14 +91,14 @@ public:
     {}
 
     std::optional<NodeBinExpr*> parse_bin_expr() {
-        if (auto lhs = parse_expr()) {
+        if (auto left = parse_expr()) {
             auto bin_expr = m_allocator.alloc<NodeBinExpr>();
             if (peek().has_value() && peek().value().type == TokenType::add) {
                 auto bin_expr_add = m_allocator.alloc<NodeBinExprAdd>();
-                bin_expr_add->lhs = lhs.value();
+                bin_expr_add->left = left.value();
                 consume(); // consume '+'
-                if (auto rhs = parse_expr()) {
-                    bin_expr_add->rhs = rhs.value();
+                if (auto right = parse_expr()) {
+                    bin_expr_add->right = right.value();
                     bin_expr->var = bin_expr_add;
                     return bin_expr;
                 }
@@ -123,7 +123,7 @@ public:
             term_int_lit->int_lit = consume(); // the integer literal is the consumed token
             auto term = m_allocator.alloc<NodeTerm>(); // allocate size for a term
             term->var = term_int_lit; // the variant for the NodeTerm becomes an int literal
-            return expr; 
+            return term; 
         }
         else if (peek().has_value() && peek().value().type == TokenType::dp_lit) {
             auto term_dp_lit = m_allocator.alloc<NodeTermDPLit>(); // allocate size for a double-point literal term
@@ -152,10 +152,9 @@ public:
             return {};
         }
         if (auto bin_expr = parse_bin_expr()) {
-            auto expr = m_allocator.alloc(<NodeExpr>();
+            auto expr = m_allocator.alloc<NodeExpr>();
             expr->var = bin_expr.value();
             return expr;
-        )
         }
         else {
             return {};
