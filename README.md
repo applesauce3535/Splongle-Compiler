@@ -9,6 +9,8 @@ data types. Arithmetic is being worked on.
 # Future features
 <ul> 
   <li>Character data types</li>
+  <li>I/O support</li>
+  <li>Arrays</li>
   <li>Control structures (if and else, for-loops, while-loops)</li>
   <li>Scoping</li>
   <li>Subprograms</li>
