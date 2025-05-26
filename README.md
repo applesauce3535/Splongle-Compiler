@@ -5,7 +5,7 @@ programming, and bolster my C++ skills. I hope to make a Turing-complete languag
 to take it from there.
 # Current features
 Currently the language supports sending exit codes and initialization of integer and double primitive
-data types. Arithmetic is being worked on.
+data types. Addition and subtraction for integers has been implemented, the other arithmetic operations are soon to come, and operations on floating-point values will follow shortly after.
 # Future features
 <ul> 
   <li>Character data types</li>

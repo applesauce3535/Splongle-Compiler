@@ -2,6 +2,7 @@
 
 #include "tokenization.hpp"
 #include <variant>
+#include <optional>
 #include "./arena.hpp"
 
 struct NodeTermIntLit {
@@ -35,9 +36,15 @@ struct NodeBinExprAdd {
     NodeExpr* right;
 };
 
+struct NodeBinExprSub {
+    NodeExpr* left;
+    NodeExpr* right;
+};
+
 struct NodeBinExpr {
     // a whole binary expression can be addition or multiplication
-    std::variant<NodeBinExprAdd*, NodeBinExprMul*> var;
+    // TODO: add other arithmetic operations
+    std::variant<NodeBinExprAdd*, NodeBinExprSub*, NodeBinExprMul*> var;
 };
 
 struct NodeTerm {
@@ -47,7 +54,7 @@ struct NodeTerm {
 struct NodeExpr {
     // an expression can be an integer literal, an identifier, a double-point literal,
     // or a binary expression consisting of two expressions, which is what var is
-    std::variant<NodeTerm*, NodeBinExpr*> var; 
+    std::variant<NodeTerm*, NodeBinExpr*> var;
 };
 
 struct NodeStmtSplinge {
@@ -90,33 +97,6 @@ public:
     : m_tokens(std::move(tokens)), m_allocator(1024 * 1024 * 4) // arena is 4MB
     {}
 
-    // std::optional<NodeBinExpr*> parse_bin_expr() {
-    //     if (auto left = parse_expr()) {
-    //         auto bin_expr = m_allocator.alloc<NodeBinExpr>();
-    //         if (peek().has_value() && peek().value().type == TokenType::add) {
-    //             auto bin_expr_add = m_allocator.alloc<NodeBinExprAdd>();
-    //             bin_expr_add->left = left.value();
-    //             consume(); // consume '+'
-    //             if (auto right = parse_expr()) {
-    //                 bin_expr_add->right = right.value();
-    //                 bin_expr->var = bin_expr_add;
-    //                 return bin_expr;
-    //             }
-    //             else {
-    //                 std::cerr << "Expected epxression after '+', DOW\n";
-    //                 exit(EXIT_FAILURE);
-    //             }
-    //         }
-    //         else {
-    //             std::cerr << "Unsupported binary operator, DOW\n";
-    //             exit(EXIT_FAILURE);
-    //         }
-    //     }
-    //     else {
-    //         return {};
-    //     }
-    // }
-
     std::optional<NodeTerm*> parse_term() {
         if (peek().has_value() && peek().value().type == TokenType::int_lit) {
             auto term_int_lit = m_allocator.alloc<NodeTermIntLit>(); // allocate size for an integer literal term
@@ -145,35 +125,96 @@ public:
     }
 
     std::optional<NodeExpr*> parse_expr() {
-        if (auto term = parse_term()) {
-            auto bin_expr = m_allocator.alloc<NodeBinExpr>();
-            if (peek().has_value() && peek().value().type == TokenType::add) {
-                auto bin_expr_add = m_allocator.alloc<NodeBinExprAdd>();
-                bin_expr_add->left = term.value();
-                consume(); // consume '+'
-                if (auto right = parse_expr()) {
-                    bin_expr_add->right = right.value();
-                    bin_expr->var = bin_expr_add;
-                    auto expr = m_allocator.alloc<NodeExpr>();
-                    return expr;
-                }
-                else {
-                    std::cerr << "Expected epxression after '+', DOW\n";
+        auto left_opt = parse_term();
+        if (!left_opt.has_value()) { // if no value was created, the expression is incorrect
+            return std::nullopt;
+        }
+
+        NodeExpr* left_operand = m_allocator.alloc<NodeExpr>();
+        left_operand->var = left_opt.value(); // left operand variant is the value from the left optional (constant or variable)
+
+        while (peek().has_value()) {
+            TokenType op = peek().value().type;
+            if (op == TokenType::add || op == TokenType::sub) {
+                consume(); // consume operand
+                auto right_opt = parse_term(); // this only parses the next term, not the whole expression
+                if (!right_opt.has_value()) {
+                    std::cerr << "Expected expression after operator, DOW\n";
                     exit(EXIT_FAILURE);
                 }
+                auto right_term = right_opt.value();
+                NodeExpr* right_operand = m_allocator.alloc<NodeExpr>();
+                right_operand->var = right_term;
+                auto bin_expr = m_allocator.alloc<NodeBinExpr>(); // allocate room for a bin expression node
+                if (op == TokenType::add) { // handle addition
+                    auto bin_expr_add = m_allocator.alloc<NodeBinExprAdd>();
+                    bin_expr_add->left = left_operand; // the bin expression's left operand value
+                    bin_expr_add->right = right_operand; // its right operand value
+                    bin_expr->var = bin_expr_add;
+                }
+                else if (op == TokenType::sub) { // handle subtraction
+                    auto bin_expr_sub = m_allocator.alloc<NodeBinExprSub>();
+                    bin_expr_sub->left = left_operand;
+                    bin_expr_sub->right = right_operand;
+                    bin_expr->var = bin_expr_sub;
+                }
+                left_operand = m_allocator.alloc<NodeExpr>();
+                left_operand->var = bin_expr;
+            }
+            else {
+                break; // there are no operators left in the expression
             }
         }
-        else {
-            return {};
-        }
-        if (auto bin_expr = parse_bin_expr()) {
-            auto expr = m_allocator.alloc<NodeExpr>();
-            expr->var = bin_expr.value();
-            return expr;
-        }
-        else {
-            return {};
-        }
+        return left_operand; // final result of any number of binary expressions
+
+    //     if (auto term = parse_term()) {
+    //         if (peek().has_value() && peek().value().type == TokenType::add) { // handle addition
+    //             auto bin_expr = m_allocator.alloc<NodeBinExpr>(); // allocate appropriate space for bin expression
+    //             auto bin_expr_add = m_allocator.alloc<NodeBinExprAdd>(); // allocate space for addition
+    //             auto left_expr = m_allocator.alloc<NodeExpr>(); // get the left side expression
+    //             left_expr->var = term.value();
+    //             bin_expr_add->left = left_expr; // put the left expression into the bin expression
+    //             consume(); // consume '+'
+    //             if (auto right = parse_expr()) {
+    //                 bin_expr_add->right = right.value(); // get the right expression
+    //                 bin_expr->var = bin_expr_add; 
+    //                 auto expr = m_allocator.alloc<NodeExpr>(); // now we know the total size of the expression
+    //                 expr->var = bin_expr;
+    //                 return expr;
+    //             }
+    //             else {
+    //                 std::cerr << "Expected epxression after '+', DOW\n";
+    //                 exit(EXIT_FAILURE);
+    //             }
+    //         }
+    //         else if (peek().has_value() && peek().value().type == TokenType::sub) { // handle subtraction
+    //             auto bin_expr = m_allocator.alloc<NodeBinExpr>(); // allocate appropriate space for bin expression
+    //             auto bin_expr_sub = m_allocator.alloc<NodeBinExprSub>(); // allocate space for subtraction
+    //             auto left_expr = m_allocator.alloc<NodeExpr>(); // get the left side expression
+    //             left_expr->var = term.value();
+    //             bin_expr_sub->left = left_expr; // put the left expression into the bin expression
+    //             consume(); // consume '-'
+    //             if (auto right = parse_expr()) {
+    //                 bin_expr_sub->right = right.value(); // get the right expression
+    //                 bin_expr->var = bin_expr_sub; 
+    //                 auto expr = m_allocator.alloc<NodeExpr>(); // now we know the total size of the expression
+    //                 expr->var = bin_expr;
+    //                 return expr;
+    //             }
+    //             else {
+    //                 std::cerr << "Expected epxression after '-', DOW\n";
+    //                 exit(EXIT_FAILURE);
+    //             }
+    //         }
+    //         else {
+    //             auto expr = m_allocator.alloc<NodeExpr>();
+    //             expr->var = term.value();
+    //             return expr;
+    //         }    
+    //     }
+    //     else {
+    //         return {};
+    //     }
     }
 
     std::optional<NodeStmt*> parse_stmt() {

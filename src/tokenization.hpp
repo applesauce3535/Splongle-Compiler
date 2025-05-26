@@ -9,7 +9,7 @@
     The different tokens of splongle
 */
 enum class TokenType {id, exit, int_lit, splong, open_paren, close_paren, splinge, splongd, dp_lit, assign, 
-                      add, mul};
+                      add, sub, mul};
 
 
 struct Token { 
@@ -155,6 +155,11 @@ public:
             else if (peek().value() == '+') { // handle addition
                 consume();
                 tokens.push_back({.type = TokenType::add});
+                continue;
+            }
+            else if (peek().value() == '-') { // handle subtraction
+                consume();
+                tokens.push_back({.type = TokenType::sub});
                 continue;
             }
             else { // handle any undefined tokens of splongle

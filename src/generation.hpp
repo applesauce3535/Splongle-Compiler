@@ -2,7 +2,7 @@
 
 #include <unordered_map>
 #include <cassert>
-
+#include <variant>
 class Generator {
 
 public:
@@ -10,37 +10,66 @@ public:
     : m_prog(std::move(prog))
     {}
 
-
-    void gen_expr(const NodeExpr* expr) {
-        struct ExprVisitor {
+    void gen_term(const NodeTerm* term) {
+        struct TermVisitor {
             Generator* gen;
-
-            void operator()(const NodeTermId* expr_id) {
-                if (!gen->m_symbol_table.contains(expr_id->id.value.value())) {
-                    std::cerr << "Undeclared identifier: " << expr_id->id.value.value() << "\n";
+            void operator()(const NodeTermId* term_id) {
+                if (!gen->m_symbol_table.contains(term_id->id.value.value())) {
+                    std::cerr << "Undeclared identifier: " << term_id->id.value.value() << "\n";
                     exit(EXIT_FAILURE);
                 }
                 std::stringstream offset;
-                const auto& var = gen->m_symbol_table.at(expr_id->id.value.value());
+                const auto& var = gen->m_symbol_table.at(term_id->id.value.value());
                 offset << "QWORD [rsp + " << (gen->m_stack_size - var.stack_loc - 1) * 8 << "]\n";
                 gen->push(offset.str());
             }
-
-            void operator()(const NodeTermIntLit* expr_int) const {
-                gen->m_output << "    mov rax, " << expr_int->int_lit.value.value() << "\n";
+            void operator()(const NodeTermIntLit* term_int) const {
+                gen->m_output << "    mov rax, " << term_int->int_lit.value.value() << "\n";
                 gen->push("rax");
             }
-            void operator()(const NodeTermDPLit* expr_double) const {
+            void operator()(const NodeTermDPLit* term_double) const {
                 std::string label = "L" + std::to_string(gen->m_label_counter++); // make a label of L + the current label counter and then post increment it
-                gen->m_data << label << ": dq " << expr_double->dp_lit.value.value() << "\n";
+                gen->m_data << label << ": dq " << term_double->dp_lit.value.value() << "\n";
 
                 gen->m_output << "    movsd xmm0, [rel " << label << "]\n";
                 gen->m_output << "    sub rsp, 8\n"; // this makes space on the stack for a double
                 gen->m_output << "    movsd [rsp], xmm0\n"; // this moves the double into wherever the stack pointer is
                 gen->m_stack_size++; // explicitly state to increase stack size because we didn't call push()
             }
+        };
+        TermVisitor visitor({.gen = this});
+        std::visit(visitor, term->var);
+    }
+
+    void gen_expr(const NodeExpr* expr) {
+        struct ExprVisitor {
+            Generator* gen;
+
+            void operator()(const NodeTerm* term) const {
+                gen->gen_term(term);
+            }
             void operator()(const NodeBinExpr* bin_expr) const {
-                assert(false); // not implemented
+                if (std::holds_alternative<NodeBinExprAdd*>(bin_expr->var)) { // this is asking are we doing an addition
+                    auto* add_expr = std::get<NodeBinExprAdd*>(bin_expr->var); // get the whole expression
+                    gen->gen_expr(add_expr->left); // generate the left operand
+                    gen->gen_expr(add_expr->right); // generate the right operand
+                    gen->pop("rcx"); // put the right operand into rcx
+                    gen->pop("rax"); // put the left operand into rax
+                    gen->m_output << "    add rax, rcx\n"; // this means rax = rax + rcx
+                    gen->push("rax"); // push the new result
+                }
+                else if (std::holds_alternative<NodeBinExprSub*>(bin_expr->var)) { // this is asking are we doing a subtraction
+                    auto* sub_expr = std::get<NodeBinExprSub*>(bin_expr->var); // get the whole expression
+                    gen->gen_expr(sub_expr->left); // generate the left operand
+                    gen->gen_expr(sub_expr->right); // generate the right operand
+                    gen->pop("rcx"); // put the right operand into rcx
+                    gen->pop("rax"); // put the left operand into rax
+                    gen->m_output << "    sub rax, rcx\n"; // this means rax = rax - rcx
+                    gen->push("rax"); // push the new result
+                }
+                else {
+                    exit(EXIT_FAILURE);
+                }
             }
         };
 
