@@ -30,6 +30,11 @@ struct NodeBinExprMul {
     NodeExpr* right;
 };
 
+struct NodeBinExprDiv {
+    NodeExpr* left;
+    NodeExpr* right;
+};
+
 struct NodeBinExprAdd {
     // a binary addition node consists of a left and right operand
     NodeExpr* left;
@@ -42,9 +47,8 @@ struct NodeBinExprSub {
 };
 
 struct NodeBinExpr {
-    // a whole binary expression can be addition or multiplication
-    // TODO: add other arithmetic operations
-    std::variant<NodeBinExprAdd*, NodeBinExprSub*, NodeBinExprMul*> var;
+    // a whole binary expression can be any arithmetic operation
+    std::variant<NodeBinExprAdd*, NodeBinExprSub*, NodeBinExprMul*, NodeBinExprDiv*> var;
 };
 
 struct NodeTerm {
@@ -135,7 +139,7 @@ public:
 
         while (peek().has_value()) {
             TokenType op = peek().value().type;
-            if (op == TokenType::add || op == TokenType::sub) {
+            if (op == TokenType::add || op == TokenType::sub || op == TokenType::mul || op == TokenType::div) {
                 consume(); // consume operand
                 auto right_opt = parse_term(); // this only parses the next term, not the whole expression
                 if (!right_opt.has_value()) {
@@ -146,7 +150,23 @@ public:
                 NodeExpr* right_operand = m_allocator.alloc<NodeExpr>();
                 right_operand->var = right_term;
                 auto bin_expr = m_allocator.alloc<NodeBinExpr>(); // allocate room for a bin expression node
-                if (op == TokenType::add) { // handle addition
+                if (op == TokenType::mul) { // handle multiplication
+                    auto bin_expr_mul = m_allocator.alloc<NodeBinExprMul>();
+                    bin_expr_mul->left = left_operand; // the bin expression's left operand value
+                    bin_expr_mul->right = right_operand; // its right operand value
+                    bin_expr->var = bin_expr_mul;
+                }
+                else if (op == TokenType::div) { // handle division
+                    auto bin_expr_div = m_allocator.alloc<NodeBinExprDiv>();
+                    bin_expr_div->left = left_operand; // the bin expression's left operand value
+                    bin_expr_div->right = right_operand; // its right operand value
+                    if (bin_expr_div->right == 0) {
+                        std::cerr << "Division by 0 exception, DOW\n";
+                        exit(EXIT_FAILURE);
+                    }
+                    bin_expr->var = bin_expr_div;
+                }
+                else if (op == TokenType::add) { // handle addition
                     auto bin_expr_add = m_allocator.alloc<NodeBinExprAdd>();
                     bin_expr_add->left = left_operand; // the bin expression's left operand value
                     bin_expr_add->right = right_operand; // its right operand value
@@ -166,55 +186,6 @@ public:
             }
         }
         return left_operand; // final result of any number of binary expressions
-
-    //     if (auto term = parse_term()) {
-    //         if (peek().has_value() && peek().value().type == TokenType::add) { // handle addition
-    //             auto bin_expr = m_allocator.alloc<NodeBinExpr>(); // allocate appropriate space for bin expression
-    //             auto bin_expr_add = m_allocator.alloc<NodeBinExprAdd>(); // allocate space for addition
-    //             auto left_expr = m_allocator.alloc<NodeExpr>(); // get the left side expression
-    //             left_expr->var = term.value();
-    //             bin_expr_add->left = left_expr; // put the left expression into the bin expression
-    //             consume(); // consume '+'
-    //             if (auto right = parse_expr()) {
-    //                 bin_expr_add->right = right.value(); // get the right expression
-    //                 bin_expr->var = bin_expr_add; 
-    //                 auto expr = m_allocator.alloc<NodeExpr>(); // now we know the total size of the expression
-    //                 expr->var = bin_expr;
-    //                 return expr;
-    //             }
-    //             else {
-    //                 std::cerr << "Expected epxression after '+', DOW\n";
-    //                 exit(EXIT_FAILURE);
-    //             }
-    //         }
-    //         else if (peek().has_value() && peek().value().type == TokenType::sub) { // handle subtraction
-    //             auto bin_expr = m_allocator.alloc<NodeBinExpr>(); // allocate appropriate space for bin expression
-    //             auto bin_expr_sub = m_allocator.alloc<NodeBinExprSub>(); // allocate space for subtraction
-    //             auto left_expr = m_allocator.alloc<NodeExpr>(); // get the left side expression
-    //             left_expr->var = term.value();
-    //             bin_expr_sub->left = left_expr; // put the left expression into the bin expression
-    //             consume(); // consume '-'
-    //             if (auto right = parse_expr()) {
-    //                 bin_expr_sub->right = right.value(); // get the right expression
-    //                 bin_expr->var = bin_expr_sub; 
-    //                 auto expr = m_allocator.alloc<NodeExpr>(); // now we know the total size of the expression
-    //                 expr->var = bin_expr;
-    //                 return expr;
-    //             }
-    //             else {
-    //                 std::cerr << "Expected epxression after '-', DOW\n";
-    //                 exit(EXIT_FAILURE);
-    //             }
-    //         }
-    //         else {
-    //             auto expr = m_allocator.alloc<NodeExpr>();
-    //             expr->var = term.value();
-    //             return expr;
-    //         }    
-    //     }
-    //     else {
-    //         return {};
-    //     }
     }
 
     std::optional<NodeStmt*> parse_stmt() {
@@ -260,7 +231,7 @@ public:
                 exit(EXIT_FAILURE);
             }
             if (!peek().has_value() || peek().value().type != TokenType::splong) { // ensure 'splong' follows identifier declaration
-                std::cerr << "Expected 'splong', DOW\n";
+                std::cerr << "Expected 'splong', DOW (this is the first expected splong)\n";
                 exit(EXIT_FAILURE);
             }
             consume(); // consume 'splong'

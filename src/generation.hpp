@@ -20,7 +20,7 @@ public:
                 }
                 std::stringstream offset;
                 const auto& var = gen->m_symbol_table.at(term_id->id.value.value());
-                offset << "QWORD [rsp + " << (gen->m_stack_size - var.stack_loc - 1) * 8 << "]\n";
+                offset << "QWORD [rsp + " << (gen->m_stack_size - var.stack_loc - 1) * 8 << "]";
                 gen->push(offset.str());
             }
             void operator()(const NodeTermIntLit* term_int) const {
@@ -49,7 +49,26 @@ public:
                 gen->gen_term(term);
             }
             void operator()(const NodeBinExpr* bin_expr) const {
-                if (std::holds_alternative<NodeBinExprAdd*>(bin_expr->var)) { // this is asking are we doing an addition
+                if (std::holds_alternative<NodeBinExprMul*>(bin_expr->var)) { // this is asking are we doing a multiplication
+                    auto* mul_expr = std::get<NodeBinExprMul*>(bin_expr->var); // get the whole expression
+                    gen->gen_expr(mul_expr->left); // generate the left operand
+                    gen->gen_expr(mul_expr->right); // generate the right operand
+                    gen->pop("rcx"); // put the right operand into rcx
+                    gen->pop("rax"); // put the left operand into rax
+                    gen->m_output << "    imul rax, rcx\n"; // this means rax = rax * rcx
+                    gen->push("rax"); // push the new result
+                }
+                else if (std::holds_alternative<NodeBinExprDiv*>(bin_expr->var)) { // this is asking are we doing a division
+                    auto* div_expr = std::get<NodeBinExprDiv*>(bin_expr->var); // get the whole expression
+                    gen->gen_expr(div_expr->left); // gen numerator
+                    gen->gen_expr(div_expr->right); // gen denominator
+                    gen->pop("rcx"); // rcx = denominator
+                    gen->pop("rax"); // rax = numerator
+                    gen->m_output << "    cqo\n"; // this sign extends rax into rdx, result is a 128-bit integer rdx:rax
+                    gen->m_output << "    idiv rcx\n"; // rax = rax / rcx, rdx = rax % rcx
+                    gen->push("rax"); // push the new result
+                }
+                else if (std::holds_alternative<NodeBinExprAdd*>(bin_expr->var)) { // this is asking are we doing an addition
                     auto* add_expr = std::get<NodeBinExprAdd*>(bin_expr->var); // get the whole expression
                     gen->gen_expr(add_expr->left); // generate the left operand
                     gen->gen_expr(add_expr->right); // generate the right operand
