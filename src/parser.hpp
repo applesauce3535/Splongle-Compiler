@@ -101,6 +101,20 @@ public:
     : m_tokens(std::move(tokens)), m_allocator(1024 * 1024 * 4) // arena is 4MB
     {}
 
+    // function to define operator precedence
+    int precedence(TokenType op) {
+        switch (op) {
+            case TokenType::mul:
+            case TokenType::div:
+                return 2;
+            case TokenType::add:
+            case TokenType::sub:
+                return 1;
+            default:
+                return 0;
+        }
+    }
+
     std::optional<NodeTerm*> parse_term() {
         if (peek().has_value() && peek().value().type == TokenType::int_lit) {
             auto term_int_lit = m_allocator.alloc<NodeTermIntLit>(); // allocate size for an integer literal term
@@ -128,7 +142,7 @@ public:
         }
     }
 
-    std::optional<NodeExpr*> parse_expr() {
+    std::optional<NodeExpr*> parse_expr(int min_prec = 0) {
         auto left_opt = parse_term();
         if (!left_opt.has_value()) { // if no value was created, the expression is incorrect
             return std::nullopt;
@@ -138,52 +152,46 @@ public:
         left_operand->var = left_opt.value(); // left operand variant is the value from the left optional (constant or variable)
 
         while (peek().has_value()) {
-            TokenType op = peek().value().type;
-            if (op == TokenType::add || op == TokenType::sub || op == TokenType::mul || op == TokenType::div) {
-                consume(); // consume operand
-                auto right_opt = parse_term(); // this only parses the next term, not the whole expression
-                if (!right_opt.has_value()) {
-                    std::cerr << "Expected expression after operator, DOW\n";
-                    exit(EXIT_FAILURE);
-                }
-                auto right_term = right_opt.value();
-                NodeExpr* right_operand = m_allocator.alloc<NodeExpr>();
-                right_operand->var = right_term;
-                auto bin_expr = m_allocator.alloc<NodeBinExpr>(); // allocate room for a bin expression node
-                if (op == TokenType::mul) { // handle multiplication
-                    auto bin_expr_mul = m_allocator.alloc<NodeBinExprMul>();
-                    bin_expr_mul->left = left_operand; // the bin expression's left operand value
-                    bin_expr_mul->right = right_operand; // its right operand value
-                    bin_expr->var = bin_expr_mul;
-                }
-                else if (op == TokenType::div) { // handle division
-                    auto bin_expr_div = m_allocator.alloc<NodeBinExprDiv>();
-                    bin_expr_div->left = left_operand; // the bin expression's left operand value
-                    bin_expr_div->right = right_operand; // its right operand value
-                    if (bin_expr_div->right == 0) {
-                        std::cerr << "Division by 0 exception, DOW\n";
-                        exit(EXIT_FAILURE);
-                    }
-                    bin_expr->var = bin_expr_div;
-                }
-                else if (op == TokenType::add) { // handle addition
-                    auto bin_expr_add = m_allocator.alloc<NodeBinExprAdd>();
-                    bin_expr_add->left = left_operand; // the bin expression's left operand value
-                    bin_expr_add->right = right_operand; // its right operand value
-                    bin_expr->var = bin_expr_add;
-                }
-                else if (op == TokenType::sub) { // handle subtraction
-                    auto bin_expr_sub = m_allocator.alloc<NodeBinExprSub>();
-                    bin_expr_sub->left = left_operand;
-                    bin_expr_sub->right = right_operand;
-                    bin_expr->var = bin_expr_sub;
-                }
-                left_operand = m_allocator.alloc<NodeExpr>();
-                left_operand->var = bin_expr;
+            TokenType op = peek()->type; // look at what the operator is
+            int prec = precedence(op); // get the precedence of the operator
+            if (prec == 0 || prec < min_prec) {
+                break;
             }
-            else {
-                break; // there are no operators left in the expression
+            consume(); // consume operator
+            int next_min_prec = prec + 1;
+            auto right_opt = parse_expr(next_min_prec);
+            if (!right_opt) {
+                std::cerr << "Expected expression after operator, DOW\n";
+                exit(EXIT_FAILURE);
             }
+            NodeExpr* right_operand = right_opt.value();
+            auto bin_expr = m_allocator.alloc<NodeBinExpr>(); // allocate room for a bin expression node
+            if (op == TokenType::mul) { // handle multiplication
+                auto bin_expr_mul = m_allocator.alloc<NodeBinExprMul>();
+                bin_expr_mul->left = left_operand; // the bin expression's left operand value
+                bin_expr_mul->right = right_operand; // its right operand value
+                bin_expr->var = bin_expr_mul;
+            }
+            else if (op == TokenType::div) { // handle division
+                auto bin_expr_div = m_allocator.alloc<NodeBinExprDiv>();
+                bin_expr_div->left = left_operand; // the bin expression's left operand value
+                bin_expr_div->right = right_operand; // its right operand value
+                bin_expr->var = bin_expr_div;
+            }
+            else if (op == TokenType::add) { // handle addition
+                auto bin_expr_add = m_allocator.alloc<NodeBinExprAdd>();
+                bin_expr_add->left = left_operand; // the bin expression's left operand value
+                bin_expr_add->right = right_operand; // its right operand value
+                bin_expr->var = bin_expr_add;
+            }
+            else if (op == TokenType::sub) { // handle subtraction
+                auto bin_expr_sub = m_allocator.alloc<NodeBinExprSub>();
+                bin_expr_sub->left = left_operand;
+                bin_expr_sub->right = right_operand;
+                bin_expr->var = bin_expr_sub;
+            }
+            left_operand = m_allocator.alloc<NodeExpr>();
+            left_operand->var = bin_expr;
         }
         return left_operand; // final result of any number of binary expressions
     }

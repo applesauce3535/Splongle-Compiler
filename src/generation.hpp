@@ -61,6 +61,19 @@ public:
                 else if (std::holds_alternative<NodeBinExprDiv*>(bin_expr->var)) { // this is asking are we doing a division
                     auto* div_expr = std::get<NodeBinExprDiv*>(bin_expr->var); // get the whole expression
                     gen->gen_expr(div_expr->left); // gen numerator
+
+                    if (auto* right_expr = div_expr->right; // division by 0 check
+                        std::holds_alternative<NodeTerm*>(right_expr->var)) {
+                        auto* term = std::get<NodeTerm*>(right_expr->var);
+                        if (std::holds_alternative<NodeTermIntLit*>(term->var)) {
+                            auto* lit = std::get<NodeTermIntLit*>(term->var);
+                            if (lit->int_lit.value == "0") {
+                                std::cerr << "Division by 0 exception, DOW\n";
+                                exit(EXIT_FAILURE);
+                            }
+                        }
+                    }
+
                     gen->gen_expr(div_expr->right); // gen denominator
                     gen->pop("rcx"); // rcx = denominator
                     gen->pop("rax"); // rax = numerator
