@@ -36,6 +36,9 @@ public:
                 gen->m_output << "    movsd [rsp], xmm0\n"; // this moves the double into wherever the stack pointer is
                 gen->m_stack_size++; // explicitly state to increase stack size because we didn't call push()
             }
+            void operator()(const NodeTermExpr* term_expr) const {
+                gen->gen_expr(term_expr->expr); // call gen_expr using the term expression's expression, don't need to generate anything here
+            }
         };
         TermVisitor visitor({.gen = this});
         std::visit(visitor, term->var);

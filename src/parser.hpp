@@ -20,7 +20,13 @@ struct NodeTermId {
     Token id;
 }; 
 
+
 struct NodeExpr;
+
+struct NodeTermExpr {
+    // used for holding parenthesizd expressions
+    NodeExpr* expr;
+};
 
 // don't be scared by any of these pointers. they are placed into the memory arena when parsing happens
 // and then the whole arena is freed after code generation
@@ -52,7 +58,7 @@ struct NodeBinExpr {
 };
 
 struct NodeTerm {
-    std::variant<NodeTermIntLit*, NodeTermDPLit*, NodeTermId*> var;
+    std::variant<NodeTermIntLit*, NodeTermDPLit*, NodeTermId*, NodeTermExpr*> var;
 };
 
 struct NodeExpr {
@@ -89,9 +95,6 @@ struct NodeProg{
     std::vector<NodeStmt*> stmts;
 };
 
-struct NodeSplong {
-
-};
 
 
 class Parser {
@@ -116,6 +119,30 @@ public:
     }
 
     std::optional<NodeTerm*> parse_term() {
+        if (!peek().has_value()) {
+            return std::nullopt;
+        }
+        if (peek()->type == TokenType::open_paren) {
+            consume(); // consume '('
+            auto expr = parse_expr(); // parse the inner expression before anything else with default precedence
+            if (!expr.has_value()) { // make sure something is actually after the '('
+                std::cerr << "Expected expression after '(', DOW\n";
+                exit(EXIT_FAILURE);
+            }
+            if (!peek().has_value() || peek()->type != TokenType::close_paren) { // make sure there is a matching ')'
+                std::cerr << "Expected ')' after expression, DOW\n";
+                exit(EXIT_FAILURE);
+            }
+            consume(); // consume ')'
+
+            // the following wraps the whole expression in the parentheses as a term
+            auto term_expr = m_allocator.alloc<NodeTermExpr>();
+            term_expr->expr = expr.value();
+            auto term = m_allocator.alloc<NodeTerm>();
+            term->var = term_expr;
+
+            return term;
+        }
         if (peek().has_value() && peek().value().type == TokenType::int_lit) {
             auto term_int_lit = m_allocator.alloc<NodeTermIntLit>(); // allocate size for an integer literal term
             term_int_lit->int_lit = consume(); // the integer literal is the consumed token
