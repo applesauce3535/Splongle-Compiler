@@ -8,7 +8,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
-  "/home/splongle/muh_compiler/splongle/src/main.cpp" "CMakeFiles/splongc.dir/src/main.cpp.o" "gcc" "CMakeFiles/splongc.dir/src/main.cpp.o.d"
+  "/home/splongle/Desktop/projects/muh_compiler/splongle/src/main.cpp" "CMakeFiles/splongc.dir/src/main.cpp.o" "gcc" "CMakeFiles/splongc.dir/src/main.cpp.o.d"
   "" "splongc" "gcc" "CMakeFiles/splongc.dir/link.d"
   )
 

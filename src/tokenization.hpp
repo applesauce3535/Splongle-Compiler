@@ -173,7 +173,7 @@ public:
                 continue;
             }
             else { // handle any undefined tokens of splongle
-                std::cerr << "MAJOR FUCK UP\n";
+                std::cerr << "Unidentified token, DOW\n";
                 exit(EXIT_FAILURE);
             }
         }

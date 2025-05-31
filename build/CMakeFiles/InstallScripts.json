@@ -1,7 +1,7 @@
 {
 	"InstallScripts" : 
 	[
-		"/home/splongle/muh_compiler/splongle/build/cmake_install.cmake"
+		"/home/splongle/Desktop/projects/muh_compiler/splongle/build/cmake_install.cmake"
 	],
 	"Parallel" : false
 }

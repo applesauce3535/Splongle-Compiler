@@ -1,2 +1,3 @@
-splinge x = 7 splong
-exit(35) splong
+splinge mechanism = 35 splong
+splongd mechanism2 = 35.35 splong
+exit(1 + 2 * (3 + 4 + (5 - 2))) splong

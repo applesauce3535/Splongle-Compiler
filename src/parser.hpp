@@ -233,17 +233,17 @@ public:
                 stmt_exit->expr = node_expr.value(); // make a NodeStmtExit with expr value of node_expr's value
             }
             else {
-                std::cerr << "Invalid expression, MAJOR FUCK UP\n";
+                std::cerr << "Invalid expression, DOW\n";
                 exit(EXIT_FAILURE);
             }
             if (!peek().has_value() || peek().value().type != TokenType::close_paren) { // ensure there is a matching closing parenthesis
-                std::cerr << "Expected closing parenthesis for 'exit', MAJOR FUCK UP\n";
+                std::cerr << "Expected closing parenthesis for 'exit', DOW\n";
                 exit(EXIT_FAILURE);
             }
             consume(); // consume ')'
 
             if (!peek().has_value() || peek().value().type != TokenType::splong) { // this is ensuring 'splong' follows the exit statement  
-                std::cerr << "Expected 'splong', MAJOR FUCK UP\n";
+                std::cerr << "Expected 'splong', DOW\n";
                 exit(EXIT_FAILURE);
             }
             consume(); // consume 'splong'
@@ -262,7 +262,7 @@ public:
                 stmt_splinge->expr = expr.value(); // the splinge's value should either be an int literal or a valid identifier
             }
             else {
-                std::cerr << "Invalid expression, MAJOR FUCK UP\n";
+                std::cerr << "Invalid expression, DOW\n";
                 exit(EXIT_FAILURE);
             }
             if (!peek().has_value() || peek().value().type != TokenType::splong) { // ensure 'splong' follows identifier declaration
